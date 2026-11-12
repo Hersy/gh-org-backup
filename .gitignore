@@ -1,0 +1,21 @@
+# gfy-shared-start — managed by gfy (.gfy-shared): machine-local graphify state
+/graphify-out/cache/ast/
+/graphify-out/cache/last_query_stamp
+/graphify-out/cache/hook_sessions/
+/graphify-out/20*/
+/graphify-out/**/stat-index.json
+/graphify-out/**/manifest.json
+/graphify-out/**/.graphify_root
+/graphify-out/.graphify_python
+/graphify-out/.graphify_build_state.json
+/graphify-out/cost.json
+/graphify-out/*.html
+/graphify-out/.graphify_labels.pending.json
+lefthook-local.yml
+/*/**/graphify-out/
+!/graphify-out/.deep/*/graphify-out/
+.claude/settings.local.json
+.claude/settings.json.graphify-bak
+.claude/worktrees/
+.claude/skills/graphify/SKILL.md.bak
+# gfy-shared-end
