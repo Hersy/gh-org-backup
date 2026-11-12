@@ -1,0 +1,7 @@
+{
+  "name": "gh-org-backup",
+  "description": "Back up every GitHub repo you can read in an org (or your account) into one zip, all branches local.",
+  "author": { "name": "Hersy" },
+  "homepage": "https://github.com/Hersy/gh-org-backup",
+  "license": "MIT"
+}

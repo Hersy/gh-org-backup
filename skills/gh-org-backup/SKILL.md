@@ -5,7 +5,7 @@ description: Back up every GitHub repo the user can read in one organization (or
 
 # gh-org-backup
 
-`scripts/gh-org-backup` (next to this file) does the whole job. Needs `gh`, `git`, `zip`; it says how to install a missing one.
+`scripts/gh-org-backup` (next to this file) does the whole job. Needs `gh`, `git`, `zip`. If one is missing the script stops and prints the install command; offer to run it for the user, never install without asking.
 
 1. Run `scripts/gh-org-backup --list`. It prints the user's login first, then their orgs, one per line.
    - If the user is not logged in, it starts GitHub's browser login and prints a one-time code and `https://github.com/login/device`. Show both to the user and tell them to approve in the browser; the command continues by itself once they do.

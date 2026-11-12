@@ -24,17 +24,20 @@ Rules:
 
 ## Project
 
-Agent skill (Agent Skills layout: root `SKILL.md`) plus one Bash script, `scripts/gh-org-backup`, that backs up every readable repo of a GitHub org or account into one zip. Public; users install by cloning into their agent's skills dir.
+Agent skill at `skills/gh-org-backup/` (`SKILL.md` + one Bash script, `scripts/gh-org-backup`), that backs up every readable repo of a GitHub org or account into one zip. Public. Installed via `npx skills add` (vercel-labs/skills), the Claude plugin marketplace in `.claude-plugin/`, or git clone + symlink; see README.
 
-- Must run on macOS `/bin/bash` 3.2: no `mapfile`, no associative arrays, no `${var,,}`. Check with `/bin/bash -n` and `mise exec aqua:koalaman/shellcheck -- shellcheck scripts/gh-org-backup`.
+- Keep the skill folder self-contained: installers copy only `skills/gh-org-backup/`. Nothing else may ship a `SKILL.md` (that is why gfy runs in local mode here, not shared).
+
+- Must run on macOS `/bin/bash` 3.2: no `mapfile`, no associative arrays, no `${var,,}`. Check with `/bin/bash -n` and `mise exec aqua:koalaman/shellcheck -- shellcheck skills/gh-org-backup/scripts/gh-org-backup`.
 - Runtime deps are only `gh`, `git`, `zip`. Auth is `gh`'s browser device flow; clones go over HTTPS via `gh auth git-credential` so no SSH key is needed.
 - Picking the user's own login means `user/repos?affiliation=owner,collaborator,organization_member` (everything accessible), not owned repos only. Deliberate.
-- No test harness. Verify with a real run: `scripts/gh-org-backup --org <small-org> --out <tmp> --keep`, then compare `git branch` vs `git branch -r` counts in a clone.
+- No test harness. Verify with a real run: `skills/gh-org-backup/scripts/gh-org-backup --org <small-org> --out <tmp> --keep`, then compare `git branch` vs `git branch -r` counts in a clone.
 
 ## Project graph notes
 
 Graph: TBD (not built yet; run `gfy build`).
-Indexed: `scripts/`, `SKILL.md`, `README.md`
+Graph is local (not committed).
+Indexed: `skills/`, `README.md`
 Excluded via .graphifyignore: defaults
 If a symbol is missing from the graph, check the ignore file before concluding
 it does not exist.
