@@ -1,6 +1,9 @@
 {
   "name": "gh-org-backup",
-  "owner": { "name": "Hersy" },
+  "description": "gh-org-backup: zip every GitHub repo you can read in an org, all branches local.",
+  "owner": {
+    "name": "Hersy"
+  },
   "plugins": [
     {
       "name": "gh-org-backup",
