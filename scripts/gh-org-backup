@@ -21,13 +21,7 @@ EOF
 
 die() { echo "gh-org-backup: $*" >&2; exit 1; }
 
-need() {
-  command -v "$1" >/dev/null && return
-  case "$(uname -s)" in
-    Darwin) die "$1 not found. Install: brew install $2" ;;
-    *) die "$1 not found. Install it with your package manager ($3)." ;;
-  esac
-}
+need() { command -v "$1" >/dev/null || die "$1 not found. macOS: brew install $1. Else your package manager (gh: https://cli.github.com)."; }
 
 auth() {
   if ! gh auth status -h github.com >/dev/null 2>&1; then
@@ -37,14 +31,16 @@ auth() {
   [[ -n "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]] && return
   local scopes
   scopes=$(gh api -i user 2>/dev/null | tr -d '\r' | sed -n 's/^[Xx]-[Oo]auth-[Ss]copes: //p')
-  if [[ ",${scopes// /}," != *,repo,* || ( ",${scopes// /}," != *,read:org,* && ",${scopes// /}," != *,admin:org,* ) ]]; then
+  [[ -n $scopes ]] || return 0
+  scopes=",${scopes// /},"
+  if [[ $scopes != *,repo,* || ( $scopes != *,read:org,* && $scopes != *,admin:org,* ) ]]; then
     echo "GitHub token lacks repo/read:org scopes. Opening browser to grant them..." >&2
     gh auth refresh -h github.com -s repo,read:org
   fi
 }
 
 list_owners() {
-  gh api user -q .login
+  echo "$me"
   gh api --paginate 'user/orgs?per_page=100' -q '.[].login'
 }
 
@@ -70,7 +66,9 @@ clone_one() {
   fi
   git -C "$dir" for-each-ref --format='%(refname:strip=3)' refs/remotes/origin |
     while read -r b; do
-      [[ $b == HEAD ]] || git -C "$dir" branch -q --track "$b" "origin/$b" 2>/dev/null || true
+      [[ $b == HEAD || $b == "$(git -C "$dir" branch --show-current)" ]] && continue
+      git -C "$dir" branch -q --track "$b" "origin/$b" 2>/dev/null ||
+        echo "  warn $repo: branch $b kept only as origin/$b (name collision)" >&2
     done
   echo "  ok  $repo" >&2
 }
@@ -91,17 +89,16 @@ while (($#)); do
   shift
 done
 
-need gh gh "https://cli.github.com"
-need git git "git"
-need zip zip "zip"
+need gh; need git; need zip
 auth
 me=$(gh api user -q .login)
 
-if [[ $mode == list ]]; then list_owners; exit 0; fi
+if [[ $mode == list ]]; then list_owners || die "could not list orgs"; exit 0; fi
 
 if [[ -z $mode ]]; then
   [[ -t 0 ]] || { usage >&2; exit 2; }
-  owners=(); while IFS= read -r l; do owners+=("$l"); done < <(list_owners)
+  owners_list=$(list_owners) || die "could not list orgs"
+  owners=(); while IFS= read -r owner; do owners+=("$owner"); done <<<"$owners_list"
   PS3="Back up which account/org? "
   select org in "${owners[@]}"; do [[ -n $org ]] && break; done
   [[ -n $org ]] || exit 1
@@ -114,23 +111,23 @@ STAGE="$out/$name"
 FAILED=$(mktemp)
 ZIP="$out/$name.zip"
 [[ -e $STAGE || -e $ZIP ]] && die "$STAGE or $ZIP already exists"
-trap 'rm -f "$FAILED"' EXIT
+trap 'rm -f "$FAILED"; [[ $keep ]] || rm -rf "$STAGE"' EXIT
 
-repos=(); while IFS= read -r l; do repos+=("$l"); done < <(list_repos "$org")
-((${#repos[@]})) || die "no readable repos for $org"
-echo "Cloning ${#repos[@]} repos from $org into $STAGE ($jobs at a time)..." >&2
+repo_list=$(list_repos "$org") || die "could not list repos for $org (see gh error above)"
+[[ -n $repo_list ]] || die "no readable repos for $org"
+total=$(wc -l <<<"$repo_list" | tr -d ' ')
+echo "Cloning $total repos from $org into $STAGE ($jobs at a time)..." >&2
 
 mkdir -p "$STAGE"
 export STAGE FAILED GIT_TERMINAL_PROMPT=0 GIT_LFS_SKIP_SMUDGE=1
 export -f clone_one
-printf '%s\n' "${repos[@]}" | xargs -P "$jobs" -I{} bash -c 'clone_one "$1"' _ {}
+# shellcheck disable=SC2016
+xargs -P "$jobs" -I{} bash -c 'clone_one "$1"' _ {} <<<"$repo_list"
 
 echo "Zipping..." >&2
 (cd "$STAGE" && zip -qry "$ZIP" .)
-[[ $keep ]] || rm -rf "$STAGE"
 
-ok=$(( ${#repos[@]} - $(wc -l <"$FAILED") ))
-echo "Done: $ok/${#repos[@]} repos in $ZIP"
+echo "Done: $(( total - $(wc -l <"$FAILED") ))/$total repos in $ZIP"
 if [[ -s $FAILED ]]; then
   echo "Failed:" >&2
   cat "$FAILED" >&2
